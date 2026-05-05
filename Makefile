@@ -3,28 +3,30 @@ ifeq ($(CUDA_VER),)
   $(error "CUDA_VER is not set")
 endif
 
-APP:= app
+APP := app
 
 TARGET_DEVICE = $(shell gcc -dumpmachine | cut -f1 -d -)
+NVDS_VERSION := 7.1
 
-NVDS_VERSION:=7.1
+LIB_INSTALL_DIR ?= /opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
+APP_INSTALL_DIR ?= /opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/bin/
+INCLUDES_DIR ?= /opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/sources/includes/
 
-LIB_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/lib/
-APP_INSTALL_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/bin/
-INCLUDES_DIR?=/opt/nvidia/deepstream/deepstream-$(NVDS_VERSION)/sources/includes/
-
+# Directories
+SRC_DIR := src
+BUILD_DIR := build
 
 # Sources
-C_SRCS   := $(wildcard *.c)
-CPP_SRCS := $(wildcard *.cpp)
-INCS     := $(wildcard *.h)
+C_SRCS   := $(wildcard $(SRC_DIR)/*.c)
+CPP_SRCS := $(wildcard $(SRC_DIR)/*.cpp)
+INCS     := $(wildcard $(SRC_DIR)/*.h)
 
-PKGS:= gstreamer-1.0
-
-# Objects
-C_OBJS   := $(C_SRCS:.c=.o)
-CPP_OBJS := $(CPP_SRCS:.cpp=.o)
+# Objects (move to build/)
+C_OBJS   := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRCS))
+CPP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CPP_SRCS))
 OBJS     := $(C_OBJS) $(CPP_OBJS)
+
+PKGS := gstreamer-1.0
 
 # Compilers
 CC  := gcc
@@ -32,38 +34,39 @@ CXX := g++
 
 # Flags
 CFLAGS += -I$(INCLUDES_DIR) \
-          -I /usr/local/cuda-$(CUDA_VER)/include
+          -I /usr/local/cuda-$(CUDA_VER)/include \
+          -I$(SRC_DIR)
 CFLAGS += $(shell pkg-config --cflags $(PKGS))
 
 CXXFLAGS += -I$(INCLUDES_DIR) \
             -I /usr/local/cuda-$(CUDA_VER)/include \
+            -I$(SRC_DIR) \
             -std=c++17
 CXXFLAGS += $(shell pkg-config --cflags $(PKGS))
 
 # Libraries
-LIBS:= $(shell pkg-config --libs $(PKGS))
-
-LIBS+= -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lnvdsgst_helper -lm \
-       -L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta -lnvds_yml_parser \
-       -lnvbufsurftransform -lnvbufsurface \
-       -lcuda -Wl,-rpath,$(LIB_INSTALL_DIR)
+LIBS := $(shell pkg-config --libs $(PKGS))
+LIBS += -L/usr/local/cuda-$(CUDA_VER)/lib64/ -lcudart -lnvdsgst_helper -lm \
+        -L$(LIB_INSTALL_DIR) -lnvdsgst_meta -lnvds_meta -lnvds_yml_parser \
+        -lnvbufsurftransform -lnvbufsurface \
+        -lcuda -Wl,-rpath,$(LIB_INSTALL_DIR)
 
 all: $(APP)
 
-# C compilation
-%.o: %.c $(INCS) Makefile
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c $(INCS) Makefile | $(BUILD_DIR)
 	$(CC) -c -o $@ $(CFLAGS) $<
 
-# C++ compilation
-%.o: %.cpp $(INCS) Makefile
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cpp $(INCS) Makefile | $(BUILD_DIR)
 	$(CXX) -c -o $@ $(CXXFLAGS) $<
 
-# IMPORTANT: link with CXX (not CC)
-$(APP): $(OBJS) Makefile
+$(APP): $(OBJS)
 	$(CXX) -o $(APP) $(OBJS) $(LIBS)
 
 install: $(APP)
 	cp -rv $(APP) $(APP_INSTALL_DIR)
 
 clean:
-	rm -rf $(OBJS) $(APP)
+	rm -rf $(BUILD_DIR) $(APP)
