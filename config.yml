@@ -1,0 +1,27 @@
+source-list:
+  #semicolon separated uri. For ex- uri1;uri2;uriN;
+  list: file:///opt/nvidia/deepstream/deepstream-7.1/samples/streams/sample_720p.h264;
+
+streammux:
+  batch-size: 1
+  batched-push-timeout: 40000
+  width: 1920
+  height: 1080
+
+osd:
+  process-mode: 0
+  display-text: 0
+
+tiler:
+  rows: 1
+  columns: 1
+  width: 1280
+  height: 720
+
+sink:
+  qos: 0
+
+# Inference using nvinfer:
+primary-gie:
+  plugin-type: 0
+  config-file-path: pgie_config.yml

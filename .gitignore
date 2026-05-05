@@ -1,0 +1,13 @@
+*.o
+app
+.vscode/
+*.engine
+*.onnx.cache
+*.trt
+*.h264
+*.mp4
+*.so
+*.dll
+*.a
+*.DS_Store
+build/
