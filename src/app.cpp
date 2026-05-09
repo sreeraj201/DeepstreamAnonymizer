@@ -51,11 +51,6 @@ public:
 
         NvBufSurface *surface = (NvBufSurface *)map.data;
 
-        if (!init_scratch_buffer(surface)) {
-            gst_buffer_unmap(buf, &map);
-            return GST_PAD_PROBE_OK;
-        }
-
         for (NvDsMetaList *l_frame = batch_meta->frame_meta_list;
              l_frame != nullptr; l_frame = l_frame->next) {
 

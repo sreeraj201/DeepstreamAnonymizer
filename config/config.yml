@@ -1,6 +1,7 @@
 source-list:
   #semicolon separated uri. For ex- uri1;uri2;uriN;
   list: file:///opt/nvidia/deepstream/deepstream-7.1/samples/streams/sample_720p.h264;
+  # list: rtsp://localhost:8554/test;
 
 streammux:
   batch-size: 1
