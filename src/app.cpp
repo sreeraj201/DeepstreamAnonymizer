@@ -2,6 +2,8 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 #include <gst/gst.h>
 #include <glib.h>
@@ -14,14 +16,16 @@ extern "C" {
 #include "gstnvdsmeta.h"
 #include "nvds_yml_parser.h"
 #include "gst-nvmessage.h"
-#include "pixelate.h"
-#include "source_bin.h"
 }
+
+#include "config.h"
+#include "source_bin.h"
+#include "pixelate.h"
 
 #define OSD_PROCESS_MODE 1
 #define OSD_DISPLAY_TEXT 0
 
-#define PGIE_CLASS_ID_PERSON 2
+#define PGIE_CLASS_ID_PERSON 0
 
 #define MUXER_OUTPUT_WIDTH 1920
 #define MUXER_OUTPUT_HEIGHT 1080
@@ -29,12 +33,6 @@ extern "C" {
 
 static gboolean PERF_MODE = FALSE;
 
-struct AppConfig {
-    bool perf_mode = false;
-    bool yaml_config = false;
-    guint num_sources = 0;
-    GList* src_list = nullptr;
-};
 
 class ProbeHandler {
 public:
@@ -54,12 +52,59 @@ public:
         for (NvDsMetaList *l_frame = batch_meta->frame_meta_list;
              l_frame != nullptr; l_frame = l_frame->next) {
 
+
+            auto *config = static_cast<AppConfig *>(user_data);
+
+            const ROI& clear_roi = config->clear_roi;
+
             auto *frame_meta = (NvDsFrameMeta *)l_frame->data;
-            process_frame(surface, frame_meta, PGIE_CLASS_ID_PERSON);
+            process_frame(surface, frame_meta, PGIE_CLASS_ID_PERSON, config->roi_enabled, clear_roi);
+
+            if (config->roi_enabled)
+                draw_roi(batch_meta, frame_meta, clear_roi);
         }
 
         gst_buffer_unmap(buf, &map);
         return GST_PAD_PROBE_OK;
+    }
+
+private:
+    static void draw_roi(NvDsBatchMeta *batch_meta,
+                         NvDsFrameMeta *frame_meta, const ROI& clear_roi)
+    {
+
+        NvDsDisplayMeta *display_meta =
+            nvds_acquire_display_meta_from_pool(batch_meta);
+
+        display_meta->num_rects = 1;
+
+        NvOSD_RectParams &rect =
+            display_meta->rect_params[0];
+
+        rect.left   = clear_roi.x;
+        rect.top    = clear_roi.y;
+        rect.width  = clear_roi.w;
+        rect.height = clear_roi.h;
+
+        // Border width
+        rect.border_width = 4;
+
+        // Red border
+        rect.border_color.red   = 0.0;
+        rect.border_color.green = 0.0;
+        rect.border_color.blue  = 1.0;
+        rect.border_color.alpha = 1.0;
+
+        // Semi-transparent fill
+        rect.has_bg_color = 1;
+
+        rect.bg_color.red   = 0.0;
+        rect.bg_color.green = 0.0;
+        rect.bg_color.blue  = 1.0;
+        rect.bg_color.alpha = 0.25;
+
+        nvds_add_display_meta_to_frame(frame_meta,
+                                       display_meta);
     }
 };
 
@@ -73,7 +118,7 @@ public:
             g_getenv("NVDS_PERF_MODE") &&
             !g_strcmp0(g_getenv("NVDS_PERF_MODE"), "1");
 
-        parse_config(argc, argv);
+        ConfigParser::parse(argc, argv, config, yaml_path);
         init_cuda();
     }
 
@@ -135,26 +180,6 @@ private:
         int dev = 0;
         cudaGetDevice(&dev);
         cudaGetDeviceProperties(&prop, dev);
-    }
-
-    void parse_config(int argc, char **argv) {
-        if (argc < 2) {
-            throw std::runtime_error("Usage: <yml>");
-        }
-
-        config.yaml_config =
-            g_str_has_suffix(argv[1], ".yml") ||
-            g_str_has_suffix(argv[1], ".yaml");
-
-        if (config.yaml_config) {
-            yaml_path = argv[1];
-            nvds_parse_source_list(&config.src_list, argv[1], "source-list");
-
-            for (GList *tmp = config.src_list; tmp; tmp = tmp->next)
-                config.num_sources++;
-        } else {
-            throw std::runtime_error("Missing <yml> file");
-        }
     }
 
     bool add_sources() {
@@ -258,7 +283,7 @@ private:
         gst_pad_add_probe(pad,
             GST_PAD_PROBE_TYPE_BUFFER,
             ProbeHandler::buffer_probe,
-            nullptr, nullptr);
+            &config, nullptr);
         gst_object_unref(pad);
     }
 

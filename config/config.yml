@@ -26,3 +26,9 @@ sink:
 primary-gie:
   plugin-type: 0
   config-file-path: pgie_config.yml
+
+roi:
+  x: 150
+  y: 700
+  w: 250
+  h: 150

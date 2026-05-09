@@ -1,5 +1,5 @@
 # DeepstreamAnonymizer
-Deepstream pipeline to pixelate people and text
+Deepstream pipeline to pixelate people
 
 ## Requirements
 * NVIDIA DeepStream SDK (tested with 7.x)
