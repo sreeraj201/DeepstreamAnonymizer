@@ -11,6 +11,7 @@
 
 #include "config.h"
 
+
 class DeepStreamApp {
 public:
     DeepStreamApp(int argc, char** argv);
@@ -18,6 +19,7 @@ public:
 
     bool build();
     void run();
+    bool is_rtsp_sink() const;
 
 private:
     bool add_sources();
@@ -60,6 +62,7 @@ private:
     GstElement* h264parse_  = nullptr;
     GstElement* rtppay_     = nullptr;
     GstElement* udpsink_    = nullptr;
+    GstElement* sink_    = nullptr;
 
     GstRTSPServer* rtsp_server_ = nullptr;
 

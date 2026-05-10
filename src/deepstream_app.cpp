@@ -21,6 +21,11 @@ constexpr guint UDP_PORT  = 5400;
 
 }
 
+bool DeepStreamApp::is_rtsp_sink() const
+{
+    return config_.sink.type == 1;
+}
+
 DeepStreamApp::DeepStreamApp(
     int argc,
     char** argv)
@@ -72,8 +77,8 @@ bool DeepStreamApp::build()
             "nvstreammux",
             "streammux");
 
-    CHECK_ELEMENT(pipeline_);
-    CHECK_ELEMENT(streammux_);
+    check_element(pipeline_, "pipeline");
+    check_element(streammux_, "streammux");
 
     gst_bin_add(
         GST_BIN(pipeline_),
@@ -101,11 +106,14 @@ void DeepStreamApp::run()
         return;
     }
 
-    std::cout
-        << "\nRTSP Stream Ready\n"
-        << "rtsp://localhost:"
-        << RTSP_PORT
-        << "/ds-test\n\n";
+    if (is_rtsp_sink()) {
+        std::cout
+            << "\nRTSP Stream Ready\n"
+            << "rtsp://localhost:"
+            << RTSP_PORT
+            << "/ds-test\n\n";
+    }
+
 
     g_main_loop_run(loop_);
 
@@ -210,53 +218,65 @@ bool DeepStreamApp::create_elements()
     queue3_ = gst_element_factory_make("queue", "q3");
     queue4_ = gst_element_factory_make("queue", "q4");
 
-    rtsp_conv_ =
-        gst_element_factory_make(
-            "nvvideoconvert",
-            "rtsp-conv");
+    check_element(pgie_, "pgie");
+    check_element(tiler_, "tiler");
+    check_element(nvvidconv_, "nvvidconv");
+    check_element(nvosd_, "nvosd");
+    check_element(nvdslogger_, "nvdslogger");
 
-    capsfilter_ =
-        gst_element_factory_make(
-            "capsfilter",
-            "caps");
+    check_element(queue1_, "queue1");
+    check_element(queue2_, "queue2");
+    check_element(queue3_, "queue3");
+    check_element(queue4_, "queue4");
 
-    encoder_ =
-        gst_element_factory_make(
-            "x264enc",
-            "encoder");
+    if (is_rtsp_sink()) {
 
-    h264parse_ =
-        gst_element_factory_make(
-            "h264parse",
-            "h264parse");
+        rtsp_conv_ =
+            gst_element_factory_make(
+                "nvvideoconvert",
+                "rtsp-conv");
 
-    rtppay_ =
-        gst_element_factory_make(
-            "rtph264pay",
-            "rtppay");
+        capsfilter_ =
+            gst_element_factory_make(
+                "capsfilter",
+                "caps");
 
-    udpsink_ =
-        gst_element_factory_make(
-            "udpsink",
-            "udpsink");
+        encoder_ =
+            gst_element_factory_make(
+                "x264enc",
+                "encoder");
 
-    CHECK_ELEMENT(pgie_);
-    CHECK_ELEMENT(tiler_);
-    CHECK_ELEMENT(nvvidconv_);
-    CHECK_ELEMENT(nvosd_);
-    CHECK_ELEMENT(nvdslogger_);
+        h264parse_ =
+            gst_element_factory_make(
+                "h264parse",
+                "h264parse");
 
-    CHECK_ELEMENT(queue1_);
-    CHECK_ELEMENT(queue2_);
-    CHECK_ELEMENT(queue3_);
-    CHECK_ELEMENT(queue4_);
+        rtppay_ =
+            gst_element_factory_make(
+                "rtph264pay",
+                "rtppay");
 
-    CHECK_ELEMENT(rtsp_conv_);
-    CHECK_ELEMENT(capsfilter_);
-    CHECK_ELEMENT(encoder_);
-    CHECK_ELEMENT(h264parse_);
-    CHECK_ELEMENT(rtppay_);
-    CHECK_ELEMENT(udpsink_);
+        udpsink_ =
+            gst_element_factory_make(
+                "udpsink",
+                "udpsink");
+
+        check_element(rtsp_conv_, "rtsp_conv");
+        check_element(capsfilter_, "capsfilter");
+        check_element(encoder_, "encoder");
+        check_element(h264parse_, "h264parse");
+        check_element(rtppay_, "rtppay");
+        check_element(udpsink_, "udpsink");
+    }
+    else {
+
+        sink_ =
+            gst_element_factory_make(
+                "fakesink",
+                "sink");
+
+        check_element(sink_, "sink");
+    }
 
     return true;
 }
@@ -276,14 +296,28 @@ bool DeepStreamApp::add_elements_to_pipeline()
         nvosd_,
         queue4_,
 
-        rtsp_conv_,
-        capsfilter_,
-        encoder_,
-        h264parse_,
-        rtppay_,
-        udpsink_,
-
         nullptr);
+
+    if (is_rtsp_sink()) {
+
+        gst_bin_add_many(
+            GST_BIN(pipeline_),
+
+            rtsp_conv_,
+            capsfilter_,
+            encoder_,
+            h264parse_,
+            rtppay_,
+            udpsink_,
+
+            nullptr);
+    }
+    else {
+
+        gst_bin_add(
+            GST_BIN(pipeline_),
+            sink_);
+    }
 
     return true;
 }
@@ -311,75 +345,88 @@ bool DeepStreamApp::configure_elements()
             "Failed to parse primary-gie");
     }
 
-    GstCaps* caps =
-        gst_caps_from_string(
-            "video/x-raw,format=I420");
+    if (is_rtsp_sink()) {
 
-    g_object_set(
-        G_OBJECT(capsfilter_),
-        "caps",
-        caps,
-        nullptr);
+        GstCaps* caps =
+            gst_caps_from_string(
+                "video/x-raw,format=I420");
 
-    gst_caps_unref(caps);
+        g_object_set(
+            G_OBJECT(capsfilter_),
+            "caps",
+            caps,
+            nullptr);
 
-    g_object_set(
-        G_OBJECT(encoder_),
-        "bitrate", 4000,
-        "speed-preset", 1,
-        "tune", 0x00000004,
-        "key-int-max", 15,
-        "bframes", 0,
-        "threads", 4,
-        nullptr);
+        gst_caps_unref(caps);
 
-    g_object_set(
-        G_OBJECT(rtppay_),
-        "config-interval",
-        1,
-        "pt",
-        96,
-        nullptr);
+        g_object_set(
+            G_OBJECT(encoder_),
+            "bitrate", 4000,
+            "speed-preset", 1,
+            "tune", 0x00000004,
+            "key-int-max", 15,
+            "bframes", 0,
+            "threads", 4,
+            nullptr);
 
-    g_object_set(
-        G_OBJECT(udpsink_),
-        "host",
-        "127.0.0.1",
-        "port",
-        UDP_PORT,
-        "sync",
-        FALSE,
-        "async",
-        FALSE,
-        nullptr);
+        g_object_set(
+            G_OBJECT(rtppay_),
+            "config-interval",
+            1,
+            "pt",
+            96,
+            nullptr);
+
+        g_object_set(
+            G_OBJECT(udpsink_),
+            "host",
+            "127.0.0.1",
+            "port",
+            UDP_PORT,
+            "sync",
+            FALSE,
+            "async",
+            FALSE,
+            nullptr);
+    }
 
     return true;
 }
 
 bool DeepStreamApp::link_pipeline()
 {
-    LINK_ELEMENTS(streammux_, queue1_);
-    LINK_ELEMENTS(queue1_, pgie_);
-    LINK_ELEMENTS(pgie_, queue2_);
-    LINK_ELEMENTS(queue2_, nvdslogger_);
-    LINK_ELEMENTS(nvdslogger_, tiler_);
-    LINK_ELEMENTS(tiler_, queue3_);
-    LINK_ELEMENTS(queue3_, nvvidconv_);
-    LINK_ELEMENTS(nvvidconv_, nvosd_);
-    LINK_ELEMENTS(nvosd_, queue4_);
+    link_elements(streammux_, queue1_);
+    link_elements(queue1_, pgie_);
+    link_elements(pgie_, queue2_);
+    link_elements(queue2_, nvdslogger_);
+    link_elements(nvdslogger_, tiler_);
+    link_elements(tiler_, queue3_);
+    link_elements(queue3_, nvvidconv_);
+    link_elements(nvvidconv_, nvosd_);
+    link_elements(nvosd_, queue4_);
 
-    LINK_ELEMENTS(queue4_, rtsp_conv_);
-    LINK_ELEMENTS(rtsp_conv_, capsfilter_);
-    LINK_ELEMENTS(capsfilter_, encoder_);
-    LINK_ELEMENTS(encoder_, h264parse_);
-    LINK_ELEMENTS(h264parse_, rtppay_);
-    LINK_ELEMENTS(rtppay_, udpsink_);
+    if (is_rtsp_sink()) {
+
+        link_elements(queue4_, rtsp_conv_);
+        link_elements(rtsp_conv_, capsfilter_);
+        link_elements(capsfilter_, encoder_);
+        link_elements(encoder_, h264parse_);
+        link_elements(h264parse_, rtppay_);
+        link_elements(rtppay_, udpsink_);
+    }
+    else {
+
+        link_elements(queue4_, sink_);
+    }
 
     return true;
 }
 
 bool DeepStreamApp::setup_rtsp_server()
 {
+    if (!is_rtsp_sink())
+        return true;
+
     rtsp_server_ =
         RtspServer::create(
             RTSP_PORT,

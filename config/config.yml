@@ -1,7 +1,5 @@
 source-list:
-  #semicolon separated uri. For ex- uri1;uri2;uriN;
-  # list: file:///opt/nvidia/deepstream/deepstream-7.1/samples/streams/sample_720p.h264;
-  list: rtsp://localhost:8554/test;
+  - rtsp://localhost:8554/test
 
 streammux:
   batch-size: 1
@@ -21,13 +19,17 @@ tiler:
 
 sink:
   qos: 0
+  type: 1
+  rtsp_port: 8555
+  udp_port: 5400
+  mount: /ds-test
 
-# Inference using nvinfer:
 primary-gie:
   plugin-type: 0
   config-file-path: pgie_config.yml
 
 roi:
+  enabled: true
   x: 150
   y: 700
   w: 250

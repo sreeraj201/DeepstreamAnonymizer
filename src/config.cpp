@@ -1,113 +1,109 @@
 #include "config.h"
 
-#include <fstream>
-#include <sstream>
 #include <stdexcept>
 
-extern "C" {
-#include "nvds_yml_parser.h"
-}
-
-void ConfigParser::parse(int argc,
-                         char **argv,
-                         AppConfig& config,
-                         std::string& yaml_path)
+void ConfigParser::parse(
+    int argc,
+    char** argv,
+    AppConfig& config,
+    std::string& yaml_path)
 {
-    if (argc < 2) {
-        throw std::runtime_error(
-            "Usage: <yml>");
-    }
-
-    config.yaml_config =
-        g_str_has_suffix(argv[1], ".yml") ||
-        g_str_has_suffix(argv[1], ".yaml");
-
-    if (!config.yaml_config) {
-        throw std::runtime_error(
-            "Missing <yml> file");
-    }
+    if (argc < 2)
+        throw std::runtime_error("Missing config");
 
     yaml_path = argv[1];
 
-    nvds_parse_source_list(
-        &config.src_list,
-        argv[1],
-        "source-list");
+    YAML::Node root =
+        YAML::LoadFile(yaml_path);
 
-    for (GList *tmp = config.src_list;
-         tmp;
-         tmp = tmp->next)
-    {
-        config.num_sources++;
-    }
-
-    parse_roi_from_yaml(
-        yaml_path,
-        config.clear_roi);
-
-    config.roi_enabled =
-        (config.clear_roi.w > 0 &&
-        config.clear_roi.h > 0);
-
+    parse_sources(root, config);
+    parse_roi(root, config);
+    parse_sink(root, config);
 }
 
-void ConfigParser::parse_roi_from_yaml(
-    const std::string& path,
-    ROI& roi)
+void ConfigParser::parse_sources(
+    YAML::Node& root,
+    AppConfig& config)
 {
-    std::ifstream file(path);
-
-    if (!file.is_open()) {
+    if (!root["source-list"])
         throw std::runtime_error(
-            "Failed to open config file");
+            "Missing source-list");
+
+    auto sources = root["source-list"];
+
+    for (auto source : sources) {
+
+        config.src_list =
+            g_list_append(
+                config.src_list,
+                g_strdup(
+                    source.as<std::string>().c_str()));
+
+        config.num_sources++;
     }
+}
 
-    std::string line;
+void ConfigParser::parse_roi(
+    YAML::Node& root,
+    AppConfig& config)
+{
+    if (!root["roi"])
+        return;
 
-    roi = {0, 0, 0, 0};
+    auto roi = root["roi"];
 
-    bool inside_roi = false;
+    config.roi_enabled =
+        roi["enabled"]
+            ? roi["enabled"].as<bool>()
+            : false;
 
-    while (std::getline(file, line)) {
+    config.clear_roi.x =
+        roi["x"]
+            ? roi["x"].as<int>()
+            : 0;
 
-        line.erase(
-            0,
-            line.find_first_not_of(" \t"));
+    config.clear_roi.y =
+        roi["y"]
+            ? roi["y"].as<int>()
+            : 0;
 
-        if (line == "roi:") {
-            inside_roi = true;
-            continue;
-        }
+    config.clear_roi.w =
+        roi["w"]
+            ? roi["w"].as<int>()
+            : 0;
 
-        if (!inside_roi)
-            continue;
+    config.clear_roi.h =
+        roi["h"]
+            ? roi["h"].as<int>()
+            : 0;
+}
 
-        if (!line.empty() &&
-            line.back() == ':' &&
-            line != "roi:")
-        {
-            break;
-        }
+void ConfigParser::parse_sink(
+    YAML::Node& root,
+    AppConfig& config)
+{
+    if (!root["sink"])
+        return;
 
-        auto parse_value =
-            [&](const std::string& key,
-                int& value)
-        {
-            if (line.find(key) == 0) {
+    auto sink = root["sink"];
 
-                size_t pos = line.find(':');
+    config.sink.type =
+        sink["type"]
+            ? sink["type"].as<int>()
+            : 0;
 
-                if (pos != std::string::npos) {
+    config.sink.rtsp_port =
+        sink["rtsp_port"]
+            ? sink["rtsp_port"].as<int>()
+            : 8555;
 
-                    value = std::stoi(
-                        line.substr(pos + 1));
-                }
-            }
-        };
+    config.sink.udp_port =
+        sink["udp_port"]
+            ? sink["udp_port"].as<int>()
+            : 5400;
 
-        parse_value("x", roi.x);
-        parse_value("y", roi.y);
-        parse_value("w", roi.w);
-        parse_value("h", roi.h);
-    }
+    config.sink.mount =
+        sink["mount"]
+            ? sink["mount"].as<std::string>()
+            : "/ds-test";
 }

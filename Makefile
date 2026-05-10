@@ -27,26 +27,26 @@ C_OBJS   := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SRCS))
 CPP_OBJS := $(patsubst $(SRC_DIR)/%.cpp,$(BUILD_DIR)/%.o,$(CPP_SRCS))
 OBJS     := $(C_OBJS) $(CPP_OBJS)
 
-# GStreamer packages
+# Packages
 PKGS := gstreamer-1.0 \
-        gstreamer-rtsp-server-1.0
+        gstreamer-rtsp-server-1.0 \
+        yaml-cpp
 
 # Compilers
 CC  := gcc
 CXX := g++
 
 # Compiler flags
-CFLAGS += -I$(INCLUDES_DIR) \
-          -I/usr/local/cuda-$(CUDA_VER)/include \
-          -I$(SRC_DIR)
+COMMON_FLAGS := \
+    -I$(INCLUDES_DIR) \
+    -I/usr/local/cuda-$(CUDA_VER)/include \
+    -I$(SRC_DIR)
 
+CFLAGS += $(COMMON_FLAGS)
 CFLAGS += $(shell pkg-config --cflags $(PKGS))
 
-CXXFLAGS += -I$(INCLUDES_DIR) \
-            -I/usr/local/cuda-$(CUDA_VER)/include \
-            -I$(SRC_DIR) \
-            -std=c++17
-
+CXXFLAGS += $(COMMON_FLAGS)
+CXXFLAGS += -std=c++17
 CXXFLAGS += $(shell pkg-config --cflags $(PKGS))
 
 # Libraries
@@ -68,7 +68,6 @@ LIBS += \
 
 .PHONY: all install clean
 
-# Build rules
 all: $(APP)
 
 $(BUILD_DIR):
