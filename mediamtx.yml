@@ -1,0 +1,6 @@
+rtspAddress: :8556
+
+paths:
+  ds-test:
+    source: rtsp://127.0.0.1:8555/ds-test
+    sourceProtocol: tcp
