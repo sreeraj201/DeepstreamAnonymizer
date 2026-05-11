@@ -23,9 +23,9 @@
 property:
   gpu-id: 0
   net-scale-factor: 0.00392156862745098
-  onnx-file: ../model/peoplenet/resnet34_peoplenet_int8.onnx
-  model-engine-file: ../model/peoplenet/peoplenet_fp16.engine
-  labelfile-path: ../model/peoplenet/labels.txt
+  onnx-file: ../models/peoplenet/resnet34_peoplenet_int8.onnx
+  model-engine-file: ../models/peoplenet/peoplenet_fp16.engine
+  labelfile-path: ../models/peoplenet/labels.txt
   batch-size: 1
   process-mode: 1
   model-color-format: 0

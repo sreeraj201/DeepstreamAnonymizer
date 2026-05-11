@@ -11,4 +11,5 @@ app
 *.a
 *.DS_Store
 build/
-model/
+models/
+.env

@@ -26,7 +26,8 @@ sink:
 
 primary-gie:
   plugin-type: 0
-  config-file-path: pgie_config.yml
+  # config-file-path: pgie_config.yml
+  config-file-path: pgie_yolo_face.txt
 
 roi:
   enabled: true
