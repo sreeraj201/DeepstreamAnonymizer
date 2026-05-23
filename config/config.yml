@@ -17,6 +17,51 @@ tiler:
   width: 1280
   height: 720
 
+# --------------------------------------------------
+# PRIMARY GIE
+# --------------------------------------------------
+# Primary inference engine.
+#
+# Used for:
+#   Face detection (YOLOv8 Face)
+#
+primary-gie:
+  plugin-type: 0
+  config-file-path: pgie_yoloface.txt
+
+# --------------------------------------------------
+# SECONDARY GIE
+# --------------------------------------------------
+# Secondary inference engine.
+#
+# Used for:
+#   Face recognition embeddings (ArcFace)
+#
+secondary-gie:
+  plugin-type: 0
+  config-file-path: sgie_arcface.txt
+
+# --------------------------------------------------
+# OUTPUT SINK
+# --------------------------------------------------
+# RTSP output stream settings.
+#
+# type:
+#   0 = Default
+#   1 = RTSP output
+#
+# rtsp_port:
+#   Port exposed by RTSP server.
+#
+# udp_port:
+#   Internal UDP port used between pipeline
+#   and RTSP server.
+#
+# mount:
+#   RTSP endpoint path.
+#
+# Final stream URL:
+#   rtsp://localhost:8555/ds-test
 sink:
   qos: 0
   type: 1
@@ -24,14 +69,21 @@ sink:
   udp_port: 5400
   mount: /ds-test
 
-primary-gie:
-  plugin-type: 0
-  # config-file-path: pgie_config.yml
-  config-file-path: pgie_yolo_face.txt
-
-roi:
-  enabled: true
-  x: 150
-  y: 700
-  w: 250
-  h: 150
+# --------------------------------------------------
+# RECOGNITION ZONE
+# --------------------------------------------------
+# Defines a rectangular region where
+# face recognition is allowed.
+#
+# Faces outside this region will
+# be blurred/anonymized
+#
+# Coordinates:
+#   x, y = top-left corner
+#   w, h = width and height
+recognition-zone:
+  enabled: true 
+  x: 700
+  y: 300
+  w: 650
+  h: 650

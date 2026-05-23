@@ -16,54 +16,35 @@ struct ROI {
 struct SinkConfig {
 
     /*
-     * 0 -> fakesink
+     * 0 -> Default 
      * 1 -> RTSP output
      */
     int type = 0;
-
     int rtsp_port = 8555;
-
     int udp_port = 5400;
-
     std::string mount = "/ds-test";
 };
 
 struct AppConfig {
 
-    GList* src_list = nullptr;
-
+    GList *src_list = nullptr;
     guint num_sources = 0;
-
     bool perf_mode = false;
-
     bool roi_enabled = false;
-
     ROI clear_roi;
-
     SinkConfig sink;
 };
 
 class ConfigParser {
 
-public:
+  public:
+    static void parse(int argc, char **argv, AppConfig &config,
+                      std::string &yaml_path);
 
-    static void parse(
-        int argc,
-        char** argv,
-        AppConfig& config,
-        std::string& yaml_path);
+  private:
+    static void parse_sources(YAML::Node &root, AppConfig &config);
 
-private:
+    static void parse_roi(YAML::Node &root, AppConfig &config);
 
-    static void parse_sources(
-        YAML::Node& root,
-        AppConfig& config);
-
-    static void parse_roi(
-        YAML::Node& root,
-        AppConfig& config);
-
-    static void parse_sink(
-        YAML::Node& root,
-        AppConfig& config);
+    static void parse_sink(YAML::Node &root, AppConfig &config);
 };

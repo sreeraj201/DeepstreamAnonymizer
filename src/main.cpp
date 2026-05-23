@@ -1,7 +1,6 @@
 #include "deepstream_app.h"
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
     try {
 
         DeepStreamApp app(argc, argv);
@@ -13,7 +12,7 @@ int main(int argc, char* argv[])
 
         app.run();
 
-    } catch (const std::exception& e) {
+    } catch (const std::exception &e) {
 
         std::cerr << e.what() << '\n';
 

@@ -2,8 +2,8 @@
 gpu-id=0
 net-scale-factor=0.003921568627
 model-color-format=0
-onnx-file=../models/yolo_face/yolov8s.onnx
-model-engine-file=../models/yolo_face/model_fp16.engine
+onnx-file=../models/yolo_face/yolov8s-face.onnx
+model-engine-file=../models/yolo_face/yolov8s-face.engine
 labelfile-path=../models/yolo_face/labels.txt
 infer-dims=3;640;640
 batch-size=1
@@ -16,9 +16,8 @@ interval=0
 process-mode=1
 maintain-aspect-ratio=1
 symmetric-padding=1
-parse-bbox-func-name=NvDsInferParseYolo
-custom-lib-path=changeme
-engine-create-func-name=NvDsInferYoloCudaEngineGet
+parse-bbox-func-name=NvDsInferParseCustomYoloFace
+custom-lib-path=../parsers/libnvdsinfer_custom_yoloface.so
 
 [class-attrs-all]
 nms-iou-threshold=0.45

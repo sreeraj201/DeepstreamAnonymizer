@@ -1,6 +1,4 @@
 *.o
-app
-.vscode/
 *.engine
 *.onnx.cache
 *.trt
@@ -10,6 +8,11 @@ app
 *.dll
 *.a
 *.DS_Store
+.vscode/
 build/
 models/
+embeddings/
+third_party/
 .env
+app
+generate_embeddings
